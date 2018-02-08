@@ -20,7 +20,6 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
         super.viewDidLoad()
         makeRequest()
         
-        self.tableView.register(PhotoCell.self, forCellReuseIdentifier: "cell")
         self.tableView.delegate = self
         self.tableView.dataSource = self
     }
@@ -34,12 +33,26 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
                 print(error.localizedDescription)
             } else if let data = data,
                 let dataDictionary = try! JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                print(dataDictionary)
                 
                 // Get the dictionary from the response key
                 let responseDictionary = dataDictionary["response"] as! [String: Any]
                 // Store the returned array of dictionaries in our posts property
                 self.posts = responseDictionary["posts"] as! [[String: Any]]
+                
+                let post = self.posts.first!
+                
+                if let photos = post["photos"] as? [[String:Any]] {
+                    let photo = photos[0]
+                    let originalSize = photo["original_size"] as! [String: Any]
+                    
+                    if let width = originalSize["width"] as? CGFloat,
+                        let height = originalSize["height"] as? CGFloat {
+                        let heightToWidth = height / width
+                        let height = self.tableView.frame.width * heightToWidth
+                        self.cellHeight = height
+                        self.tableView.rowHeight = self.cellHeight
+                    }
+                }
                 
                 self.tableView.reloadData()
             }
@@ -48,21 +61,9 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        let cell = tableView.cellForRow(at: indexPath) as? PhotoCell
-        if let cell = cell {
-            let photoView = cell.photoView
-            let size = photoView?.image?.size
-            let heightToWidth = size!.height / size!.width
-            let height = cell.frame.width * heightToWidth
-            return height
-        }
-        return self.cellHeight
-    }
-    
-    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "cell") as! PhotoCell
+        let cell = tableView.dequeueReusableCell(withIdentifier: "PhotoCell", for: indexPath) as! PhotoCell
+        
         let post = posts[indexPath.row]
         
         if let photos = post["photos"] as? [[String:Any]] {
@@ -71,16 +72,11 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
             let urlString = originalSize["url"] as! String
             let url = URL(string: urlString)
             
-            cell.photoView.af_setImage(withURL: url!)
-            
-            if let width = originalSize["width"] as? CGFloat,
-                let height = originalSize["height"] as? CGFloat {
-                let heightToWidth = height / width
-                let height = cell.frame.width * heightToWidth
-                self.cellHeight = height
-            }
+            cell.photoView.af_setImage(withURL: url!, completion: { _ in
+                cell.photoView.frame = CGRect(x: 0, y: 0, width: cell.frame.width, height: self.cellHeight)
+            })
         }
-        cell.heightConstraint.constant = self.cellHeight
+        
         return cell
     }
     
@@ -96,22 +92,10 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
 
 class PhotoCell: UITableViewCell {
     
-    var photoView: UIImageView!
-    var heightConstraint: NSLayoutConstraint!
+    @IBOutlet weak var photoView: UIImageView!
     
     override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        photoView = UIImageView()
-        
-        let width = self.bounds.width
-        let height = self.bounds.height
-        self.addSubview(photoView)
-        photoView.translatesAutoresizingMaskIntoConstraints = false
-        photoView.widthAnchor.constraint(equalToConstant: width).isActive = true
-        heightConstraint = photoView.heightAnchor.constraint(equalToConstant: height)
-        heightConstraint.isActive = true
-        photoView.centerXAnchor.constraint(equalTo: self.centerXAnchor).isActive = true
-        photoView.centerYAnchor.constraint(equalTo: self.centerYAnchor).isActive = true
         photoView.contentMode = .scaleAspectFill
     }
     
