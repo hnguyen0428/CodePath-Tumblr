@@ -64,7 +64,9 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "PhotoCell", for: indexPath) as! PhotoCell
         
-        let post = posts[indexPath.row]
+        //let post = posts[indexPath.row]
+        
+        let post = posts[indexPath.section]
         
         if let photos = post["photos"] as? [[String:Any]] {
             let photo = photos[0]
@@ -81,13 +83,82 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return posts.count
+        //return posts.count
+        return 1 
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        let vc = segue.destination as! PhotoDetailsViewController
+        let cell = sender as! UITableViewCell
+        if let indexPath = tableView.indexPath(for: cell) {
+            let post = self.posts[indexPath.section]
+            vc.post = post
+        }
+        
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
     }
     
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
     }
+
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return posts.count
+    }
+    
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        
+        let headerView = UIView(frame: CGRect(x: 0, y: 0, width: 320, height: 50))
+        headerView.backgroundColor = UIColor(white: 1, alpha: 0.9)
+        
+        let profileView = UIImageView(frame: CGRect(x: 10, y: 10, width: 30, height: 30))
+        profileView.clipsToBounds = true
+        profileView.layer.cornerRadius = 15;
+        profileView.layer.borderColor = UIColor(white: 0.7, alpha: 0.8).cgColor
+        profileView.layer.borderWidth = 1;
+        
+        // Set the avatar
+        profileView.af_setImage(withURL: URL(string: "https://api.tumblr.com/v2/blog/humansofnewyork.tumblr.com/avatar")!)
+        headerView.addSubview(profileView)
+        
+        // Add a UILabel for the date here
+        
+        //let label = UILabel (frame: CGRect(x: 0, y: 0, width: 320, height: 50))
+        
+        
+        // Use the section number to get the right URL
+        // let label = ...
+
+        let post = posts[section]
+        
+        
+        let label = UILabel (frame: CGRect(x: 0, y: 0, width: 320, height: 50))
+        label.textAlignment = .center
+        var dateStr = post["date"] as! String
+        
+//        let formatter = DateFormatter()
+//        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+//        formatter.timeZone = TimeZone(identifier: "GMT")
+//        let date = formatter.date(from: dateStr!)
+//        formatter.dateFormat = "MMM d, yyyy, hh:mm"
+//        let newDate = formatter.string(from: date!)
+//        label.text = newDate
+        label.text = dateStr
+        headerView.addSubview(label)
+
+        return headerView
+        
+    }
+    
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 50
+    }
+    
 }
+
 
 
 class PhotoCell: UITableViewCell {
